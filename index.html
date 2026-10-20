@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Konten</title>
+<style>
+:root { --bg: #ffffff; --fg: #1b2430; --muted: #5d6877; --line: #FFCC00; --accent: #0f6fd1; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #151a21; --fg: #e8ecf1; --muted: #9aa6b5; --line: #FFCC00; --accent: #6aa9f0; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 20px; background: var(--bg); color: var(--fg);
+  font: 16px/1.55 "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.slot { padding: 0 0 18px; margin: 0 0 18px; border-bottom: 1px solid var(--line); }
+.slot:last-child { border-bottom: 0; margin-bottom: 0; }
+h2 { font-size: 1rem; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+p { margin: 0; white-space: pre-line; }
+a { color: var(--accent); }
+img { max-width: 100%; height: auto; display: block; border-radius: 4px; background: var(--line); }
+.note { color: var(--muted); }
+
+main { display: flex; flex-wrap: wrap; gap: 0 28px; }
+.slot { flex: 1 1 100%; }
+.slot.person { flex: 0 0 auto; width: var(--pw, 150px); padding: 0; margin: 0 0 18px; border: 0; text-align: left; }
+.slot.person { --fs-name: calc(12px + 2px); --fs-pos: 12px; --fs-nip: 10px; }
+.slot.person.large { --pw: 200px; --fs-name: calc(18px + 2px); --fs-pos: 18px; --fs-nip: 15px; }
+.photo { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
+.photo.sq { aspect-ratio: 1 / 1; object-position: 50% 25%; }
+.part-nama .pname, .part-teks .pname { margin-top: 0; }
+.pname { font-weight: 700; font-size: var(--fs-name); margin-top: 8px; }
+.ppos { font-size: var(--fs-pos); }
+.pnip { font-size: var(--fs-nip); }
+.slot.status { border: 0; padding: 14px 16px; border-radius: 6px; text-align: center; font-weight: 700; font-size: 18px; }
+.menu { display: flex; flex-direction: column; gap: 8px; width: 100%; margin: 8px 0 0; }
+.menu a { padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; }
+
+/* Mode polos (?polos=1): tanpa latar dan jarak, mengisi seluruh frame */
+html.bare, html.bare body, html.bare main, html.bare .slot { height: 100%; }
+html.bare body { padding: 0; background: transparent; }
+html.bare .slot { padding: 0; margin: 0; border: 0; }
+html.bare { --fg: #1b2430; --accent: #0f6fd1; } /* warna tetap, tidak ikut mode gelap perangkat */
+html.bare a { display: block; height: 100%; }
+html.bare a.doc { display: flex; align-items: center; justify-content: center; text-align: center; }
+.pdf a { display: block; margin: 0 0 8px; }
+.pdf canvas { display: block; width: 100%; height: auto; background: #fff; }
+html.bare .slot.pdfslot { height: auto; }
+html.bare .pdf a { height: auto; }
+html.bare img { width: 100%; height: 100%; object-fit: var(--fit, contain); border-radius: 0; background: transparent; }
+html.bare .slot.person { width: 100%; height: auto; }
+html.bare .photo { width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; }
+html.bare.solo-foto, html.bare.solo-foto body { overflow: hidden; }
+html.bare .photo.sq { width: min(100vw, 100vh); height: min(100vw, 100vh); aspect-ratio: auto; }
+.files a { display: flex; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); text-decoration: none; font-size: 14px; }
+.files a:hover, .files a:focus-visible { color: var(--hl, var(--accent)); }
+.files .ft { flex: 1; min-width: 0; }
+.files .fd { font-size: 12px; opacity: .7; white-space: nowrap; }
+.files a::after { content: "\2197"; opacity: .6; }
+html.bare .slot.files-slot { height: auto; }
+html.bare .files a { display: flex; height: auto; }
+.slot.ptitle { border: 0; padding: 0 0 10px; margin: 0; font-size: 18px; font-weight: 700; line-height: 1.35; }
+html.bare .slot.ptitle { height: auto; }
+html.bare .slot.status { height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 0; }
+</style>
+</head>
+<body>
+<main id="root"><p class="note">Memuat…</p></main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET, PAGES, SLOTS, STATUS_LEVELS } = window.APP_CONFIG;
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Alamat embed: index.html?page=halaman-1
+// Opsional: &slot=foto,nama  (hanya komponen tertentu)  &kind=photo  &heading=0 (tanpa label)
+const params = new URLSearchParams(location.search);
+const list = k => (params.get(k) ? params.get(k).split(",").map(s => s.trim()) : null);
+const onlySlots = list("slot");
+const onlyKinds = list("kind");
+// &polos=1 : mode khusus foto (tanpa latar, tanpa jarak, foto memenuhi frame). Tambahan: &fit=cover
+const bare = params.get("polos") === "1";
+const showHeading = !bare && params.get("heading") !== "0";
+// &bagian= foto | nama | jabatan | nip | teks (nama+jabatan+NIP): menampilkan sebagian data pegawai saja
+const part = ["foto", "nama", "jabatan", "nip", "teks"].includes(params.get("bagian")) ? params.get("bagian") : null;
+if (bare) {
+  document.documentElement.classList.add("bare");
+  if (part === "foto") document.documentElement.classList.add("solo-foto");
+  document.documentElement.style.setProperty("--fit", params.get("fit") === "cover" ? "cover" : "contain");
+  // &warna=1b2430 (kode hex tanpa #) mengatur warna teks dan link di mode polos
+  const c = params.get("warna");
+  if (c && /^[0-9a-f]{3,8}$/i.test(c)) {
+    document.documentElement.style.setProperty("--fg", "#" + c);
+    document.documentElement.style.setProperty("--accent", "#" + c);
+  }
+}
+
+// &garis=ffcc00 : warna garis pemisah daftar dan warna saat disorot | &tanggal=1 : tampilkan tanggal unggah di daftar
+const garis = /^[0-9a-f]{3,8}$/i.test(params.get("garis") || "") ? "#" + params.get("garis") : null;
+if (garis) {
+  document.documentElement.style.setProperty("--line", garis);
+  document.documentElement.style.setProperty("--hl", garis);
+}
+const showDate = params.get("tanggal") === "1";
+// &pdf=tampil : isi PDF digambar langsung di dalam frame (dengan PDF.js), bukan hanya link
+const showPdf = params.get("pdf") === "tampil";
+const pdfQueue = [];
+let empById = {}; // daftar pegawai, diisi saat halaman dimuat
+const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+let pdfjsPromise;
+
+function loadPdfJs() {
+  pdfjsPromise = pdfjsPromise || new Promise((ok, fail) => {
+    const s = document.createElement("script");
+    s.src = PDFJS + "pdf.min.js";
+    s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.js"; ok(window.pdfjsLib); };
+    s.onerror = () => fail(new Error("PDF.js gagal dimuat"));
+    document.head.append(s);
+  });
+  return pdfjsPromise;
+}
+
+async function drawPdf(holder, url, label) {
+  try {
+    const lib = await loadPdfJs();
+    const pdf = await lib.getDocument(url).promise;
+    const width = holder.clientWidth || 600;
+    const dpr = window.devicePixelRatio || 1;
+    holder.replaceChildren();
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const page = await pdf.getPage(n);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: (width / base.width) * dpr });
+      const canvas = el("canvas", { width: vp.width, height: vp.height });
+      holder.append(el("a", { href: url, target: "_blank", rel: "noopener" }, [canvas]));
+      await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+    }
+  } catch (err) {
+    console.error(err);
+    holder.replaceChildren(el("a", { href: url, target: "_blank", rel: "noopener", textContent: "Buka " + label + " di tab baru" }));
+  }
+}
+
+function el(tag, props = {}, kids = []) {
+  const n = document.createElement(tag);
+  Object.assign(n, props);
+  kids.forEach(k => n.append(k));
+  return n;
+}
+function say(text) { document.getElementById("root").replaceChildren(el("p", { className: "note", textContent: text })); }
+
+function fileUrl(row) {
+  const { data } = sb.storage.from(BUCKET).getPublicUrl(row.file_path);
+  return data.publicUrl + "?v=" + encodeURIComponent(row.updated_at); // ?v= memastikan file baru langsung tampil
+}
+
+function renderPerson(slot, row) {
+  const d = row.data || {};
+  // Data baru merujuk ke daftar pegawai; data lama (nama langsung di baris) tetap bisa tampil
+  const e = d.employee ? empById[d.employee]
+    : { name: d.name, position: d.position, photo_path: row.file_path, updated_at: row.updated_at };
+  if (!e) return null;
+  const nodes = [];
+  if ((!part || part === "foto") && e.photo_path) {
+    nodes.push(el("img", { className: "photo" + (part === "foto" ? " sq" : ""), alt: e.name || slot.label, loading: "lazy",
+      src: fileUrl({ file_path: e.photo_path, updated_at: e.updated_at }) }));
+  }
+  if ((!part || part === "nama" || part === "teks") && e.name) nodes.push(el("div", { className: "pname", textContent: e.name }));
+  if ((!part || part === "jabatan" || part === "teks") && e.position) nodes.push(el("div", { className: "ppos", textContent: e.position }));
+  if ((!part || part === "nip" || part === "teks") && e.nip) nodes.push(el("div", { className: "pnip", textContent: "NIP " + e.nip }));
+  if (!nodes.length) return null;
+  const box = el("section", { className: "slot person" + (slot.large ? " large" : "") + (part ? " part-" + part : "") }, nodes);
+  if (showHeading) box.prepend(el("h2", { textContent: slot.label }));
+  return box;
+}
+
+function readable(hex) { // pilih teks gelap/putih agar terbaca di atas warna latar
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.replace(/./g, c => c + c);
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#1b2430" : "#ffffff";
+}
+
+function renderStatus(slot, row) {
+  const level = STATUS_LEVELS.find(l => l.key === (row.data || {}).level);
+  if (!level) return null;
+  const box = el("section", { className: "slot status", textContent: level.label });
+  box.style.background = level.color;
+  box.style.color = readable(level.color);
+  return box;
+}
+
+function renderFiles(slot, row) { // dokumen berjumlah banyak: daftar link, terbaru di atas
+  const files = (row.data && row.data.files) || (row.file_path ? [{ path: row.file_path, title: slot.label }] : []);
+  if (!files.length) return null;
+  const box = el("section", { className: "slot files-slot" });
+  if (showHeading) box.append(el("h2", { textContent: slot.label }));
+  const fmt = t => new Date(t).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  box.append(el("div", { className: "files" }, files.map(f => el("a", {
+    href: sb.storage.from(BUCKET).getPublicUrl(f.path).data.publicUrl, target: "_blank", rel: "noopener"
+  }, [
+    el("span", { className: "ft", textContent: f.title }),
+    ...(showDate && f.at ? [el("span", { className: "fd", textContent: fmt(f.at) })] : [])
+  ]))));
+  return box;
+}
+
+function render(slot, row) {
+  if (slot.kind === "person") return renderPerson(slot, row);
+  if (slot.kind === "status") return renderStatus(slot, row);
+  if (slot.kind === "document" && slot.multiple) return renderFiles(slot, row);
+  const box = el("section", { className: "slot" });
+  if (showHeading) box.append(el("h2", { textContent: slot.label }));
+  if (slot.kind === "text") {
+    if (!row.body) return null;
+    box.append(el("p", { textContent: row.body }));
+    return box;
+  }
+  if (!row.file_path) return null;
+  const url = fileUrl(row);
+  const link = slot.kind === "photo"
+    ? el("a", { href: url, target: "_blank", rel: "noopener" }, [el("img", { src: url, alt: slot.label, loading: "lazy" })])
+    : el("a", { className: "doc", href: url, target: "_blank", rel: "noopener", textContent: showHeading ? "Buka dokumen" : slot.label });
+  if (slot.kind === "document" && showPdf) {
+    box.classList.add("pdfslot");
+    const holder = el("div", { className: "pdf" }, [el("p", { className: "note", textContent: "Memuat dokumen…" })]);
+    box.append(holder);
+    pdfQueue.push(() => drawPdf(holder, url, slot.label));
+    return box;
+  }
+  box.append(link);
+  return box;
+}
+
+function renderTitle(page) { // judul halaman diambil dari config.js (label), tanpa input di admin
+  return el("section", { className: "slot ptitle", textContent: page.label });
+}
+
+function directory() { // alamat tanpa ?page= : tampilkan tombol ke semua halaman
+  document.getElementById("root").replaceChildren(
+    el("p", { className: "note", textContent: "Pilih halaman:" }),
+    el("div", { className: "menu" }, PAGES.map(p => el("a", { href: "?page=" + p.id, textContent: p.label })))
+  );
+}
+
+async function load() {
+  const page = PAGES.find(p => p.id === params.get("page"));
+  if (!page) return directory();
+
+  const [pc, em] = await Promise.all([
+    sb.from("page_content").select("*").eq("page", page.id),
+    sb.from("employees").select("*")
+  ]);
+  if (pc.error || em.error) { console.error(pc.error || em.error); return say("Konten belum bisa dimuat. Coba muat ulang halaman."); }
+  const data = pc.data;
+  empById = Object.fromEntries(em.data.map(e => [e.id, e]));
+
+  const bySlot = Object.fromEntries(data.map(r => [r.slot, r]));
+  const slots = (page.slots || SLOTS).filter(s =>
+    (!onlySlots || onlySlots.includes(s.key)) && (!onlyKinds || onlyKinds.includes(s.kind)));
+  const nodes = slots.map(s => s.kind === "title" ? renderTitle(page) : bySlot[s.key] && render(s, bySlot[s.key])).filter(Boolean);
+  if (!nodes.length) return say("Belum ada konten.");
+  document.getElementById("root").replaceChildren(...nodes);
+  pdfQueue.splice(0).forEach(run => run());
+}
+
+load();
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !showPdf) load(); });
+</script>
+</body>
+</html>

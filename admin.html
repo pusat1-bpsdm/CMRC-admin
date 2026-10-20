@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f1f5f9; --fg: #1e293b; --muted: #64748b; --line: #e2e8f0; --field: #ffffff;
+  --accent: #3b82f6; --accent-fg: #ffffff; --danger: #dc2626; --side: #1e293b; --side-dark: #0f172a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+h1 { font-size: 1.3rem; margin: 0 0 4px; }
+h2 { font-size: 1.05rem; margin: 0 0 6px; }
+a { color: var(--accent); }
+.muted { color: var(--muted); font-size: .92rem; }
+label { display: block; margin: 14px 0 4px; font-weight: 600; font-size: .95rem; }
+.lbl { display: block; margin: 12px 0 4px; font-weight: 600; font-size: .95rem; }
+input, select, textarea { width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 8px;
+  background: var(--field); color: var(--fg); font: inherit; }
+textarea { min-height: 90px; resize: vertical; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid #cbd5e1;
+  background: var(--field); color: var(--fg); cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+button.link { border: 0; background: none; color: var(--danger); padding: 8px 6px; }
+button.link.neutral { color: var(--accent); }
+button:disabled { opacity: .55; cursor: wait; }
+.actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.msg { margin-top: 8px; min-height: 1.3em; font-size: .93rem; }
+.msg.err { color: var(--danger); }
+
+#login { max-width: 400px; margin: 12vh auto 0; background: #fff; border: 1px solid var(--line);
+  border-radius: 14px; padding: 28px; box-shadow: 0 4px 20px rgba(15,23,42,.06); }
+
+/* Kerangka dashboard */
+.shell { display: flex; min-height: 100vh; }
+.side { width: 272px; flex: none; background: var(--side); color: #cbd5e1; display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.brand { padding: 24px 20px; background: var(--side-dark); text-align: center; }
+.brand b { display: block; color: #fff; letter-spacing: .05em; font-size: 1.05rem; }
+.brand span { font-size: .85rem; color: #64748b; }
+.nav-label { padding: 18px 20px 6px; font-size: .72rem; letter-spacing: .08em; color: #64748b; }
+.nav-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+  padding: 11px 20px; border: 0; border-left: 3px solid transparent; border-radius: 0; background: none;
+  color: #cbd5e1; text-decoration: none; text-align: left; font: inherit; cursor: pointer; }
+.nav-item:hover { background: #273449; }
+.nav-item.active { background: #334155; border-left-color: var(--accent); color: #fff; }
+.badge { flex: none; font-size: .75rem; background: var(--side-dark); color: #94a3b8; padding: 2px 8px; border-radius: 999px; }
+.who { margin-top: auto; padding: 14px 20px; font-size: .8rem; color: #94a3b8; word-break: break-all; }
+.main { flex: 1; min-width: 0; }
+.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; background: #fff;
+  border-bottom: 1px solid var(--line); padding: 16px 28px; }
+.top h1 { flex: 1; margin: 0; font-size: 1.25rem; }
+.top-r { display: flex; gap: 16px; align-items: baseline; font-size: .9rem; }
+.menu-btn { display: none; }
+.content { padding: 24px 28px 64px; max-width: 1200px; }
+
+/* Isi: kartu putih di atas latar abu muda */
+#slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; align-items: start; }
+#slots > p, .panel { grid-column: 1 / -1; }
+.slot, .panel { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+.welcome { font-size: 1.7rem; margin: 4px 0 8px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 18px; }
+.stat { border-radius: 12px; padding: 18px 20px; color: #fff; }
+.stat b { display: block; font-size: 1.8rem; margin: 6px 0 2px; }
+.stat.blue { background: #3b82f6; } .stat.green { background: #16a34a; } .stat.amber { background: #d97706; }
+
+.current { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
+.current img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; background: var(--line); }
+.frow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.frow a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.levels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.level { display: flex; align-items: center; gap: 8px; margin: 0; padding: 8px 12px; border: 1px solid #cbd5e1;
+  border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .95rem; }
+.level:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.level input { width: auto; margin: 0; }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+[hidden] { display: none !important; }
+
+@media (max-width: 860px) {
+  .side { position: fixed; left: 0; top: 0; z-index: 20; transform: translateX(-100%); transition: transform .2s; }
+  .side.open { transform: none; }
+  .menu-btn { display: inline-block; }
+  .top, .content { padding-left: 16px; padding-right: 16px; }
+  .top-r .muted { display: none; }
+}
+</style>
+</head>
+<body>
+<section id="login">
+  <h1>Masuk admin</h1>
+  <p class="muted">Hanya akun admin yang bisa mengubah konten.</p>
+  <form id="loginForm">
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Kata sandi</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div class="actions"><button class="primary" type="submit">Masuk</button></div>
+    <div id="loginMsg" class="msg err" role="alert"></div>
+  </form>
+</section>
+
+<section id="app" hidden>
+  <select id="page" hidden aria-hidden="true"></select>
+  <div class="shell">
+    <aside class="side" id="side">
+      <div class="brand"><b>ADMIN KONTEN</b><span>Panel pengelolaan</span></div>
+      <nav id="nav"></nav>
+      <div class="nav-label">AKSI</div>
+      <a class="nav-item" href="index.html" target="_blank" rel="noopener">Lihat halaman konten</a>
+      <button class="nav-item" id="logout" type="button">Keluar</button>
+      <div class="who" id="who"></div>
+    </aside>
+    <div class="main">
+      <header class="top">
+        <button id="menuBtn" class="menu-btn" type="button">Menu</button>
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="top-r">
+          <a id="viewLink" href="index.html" target="_blank" rel="noopener">Lihat halaman ini</a>
+          <span id="today" class="muted"></span>
+        </div>
+      </header>
+      <div class="content"><div id="slots"></div></div>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const { SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET, MAX_MB, PAGES, SLOTS, STATUS_LEVELS } = window.APP_CONFIG;
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = id => document.getElementById(id);
+
+const TYPES = {
+  photo: { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" },
+  document: { "application/pdf": "pdf" }
+};
+const HINT = { photo: "JPG, PNG, atau WebP", document: "PDF" };
+class UserError extends Error {}
+const EMP = "__pegawai"; // pilihan khusus: Daftar pegawai
+const DASH = "__dasbor"; // pilihan khusus: Dashboard
+
+let rows = {}; // slot key -> data tersimpan untuk sub halaman yang sedang dipilih
+
+function el(tag, props = {}, kids = []) {
+  const n = document.createElement(tag);
+  Object.assign(n, props);
+  kids.forEach(k => n.append(k));
+  return n;
+}
+const curPage = () => PAGES.find(p => p.id === $("page").value) || {};
+function fileUrl(r) {
+  return sb.storage.from(BUCKET).getPublicUrl(r.file_path).data.publicUrl + "?v=" + encodeURIComponent(r.updated_at);
+}
+async function removeFile(path) {
+  if (!path) return;
+  const { error } = await sb.storage.from(BUCKET).remove([path]);
+  if (error) console.warn("Gagal menghapus file lama:", error);
+}
+
+/* ---------- Login / logout ---------- */
+sb.auth.onAuthStateChange((_event, session) => {
+  setTimeout(() => { // setTimeout menghindari panggilan Supabase di dalam callback ini
+    $("login").hidden = !!session;
+    $("app").hidden = !session;
+    if (session) { $("who").textContent = session.user.email; route(); }
+  }, 0);
+});
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  $("loginMsg").textContent = "";
+  const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  if (error) $("loginMsg").textContent = "Email atau kata sandi salah.";
+  else $("password").value = "";
+});
+$("logout").addEventListener("click", () => sb.auth.signOut());
+
+/* ---------- Pilih sub halaman ---------- */
+$("page").append(new Option("Dashboard", DASH), new Option("Daftar pegawai", EMP));
+PAGES.forEach(p => $("page").append(new Option(p.label, p.id)));
+$("page").addEventListener("change", loadPage);
+
+async function loadPage() {
+  if ($("page").value === DASH) return renderDashboard();
+  if ($("page").value === EMP) { $("viewLink").href = "index.html"; return renderEmployees(); }
+  const pageId = curPage().id;
+  $("viewLink").href = "index.html?page=" + pageId;
+  $("slots").replaceChildren(el("p", { className: "muted", textContent: "Memuat…" }));
+  await fetchEmployees();
+  const { data, error } = await sb.from("page_content").select("*").eq("page", pageId);
+  if (curPage().id !== pageId) return; // pilihan sudah berganti saat memuat
+  if (error) { $("slots").replaceChildren(el("p", { className: "muted", textContent: "Gagal memuat. Muat ulang halaman." })); return; }
+  rows = Object.fromEntries(data.map(r => [r.slot, r]));
+  $("slots").replaceChildren(...(curPage().slots || SLOTS).filter(s => s.kind !== "title").map(s => buildBox(s)));
+}
+
+/* ---------- Satu komponen = satu kotak ---------- */
+function slotBox(slot, startMsg = "") {
+  const pageId = curPage().id;
+  const row = rows[slot.key];
+  const box = el("section", { className: "slot" });
+  const msg = el("div", { className: "msg", role: "status", textContent: startMsg });
+  const say = (t, err = false) => { msg.textContent = t; msg.className = "msg" + (err ? " err" : ""); };
+
+  const isText = slot.kind === "text";
+  const input = isText
+    ? el("textarea", { value: row ? row.body || "" : "", maxLength: 5000 })
+    : el("input", { type: "file", accept: Object.keys(TYPES[slot.kind]).join(",") });
+
+  box.append(el("h2", { textContent: slot.label }));
+  if (!isText) {
+    const has = row && row.file_path;
+    box.append(el("div", { className: "current" }, [
+      ...(has && slot.kind === "photo" ? [el("img", { src: fileUrl(row), alt: "" })] : []),
+      has
+        ? el("a", { href: fileUrl(row), target: "_blank", rel: "noopener", textContent: "Lihat file saat ini" })
+        : el("span", { className: "muted", textContent: "Belum ada file." })
+    ]));
+  }
+  box.append(input);
+  if (!isText) box.append(el("div", { className: "muted", textContent: `${HINT[slot.kind]}, maks ${MAX_MB} MB. File baru akan menggantikan yang lama.` }));
+
+  const saveBtn = el("button", { className: "primary", type: "button", textContent: isText ? "Simpan teks" : "Upload dan ganti" });
+  const filled = row && (isText ? row.body : row.file_path);
+  const clearBtn = el("button", { className: "link", type: "button", textContent: "Kosongkan", hidden: !filled });
+  box.append(el("div", { className: "actions" }, [saveBtn, clearBtn]), msg);
+
+  async function upsert(patch) {
+    const newRow = { page: pageId, slot: slot.key, kind: slot.kind, updated_at: new Date().toISOString(), ...patch };
+    const { data, error } = await sb.from("page_content").upsert(newRow, { onConflict: "page,slot" }).select().single();
+    if (error) throw error;
+    if (curPage().id === pageId) rows[slot.key] = data;
+    refreshCounts();
+  }
+
+  saveBtn.addEventListener("click", async () => {
+    saveBtn.disabled = clearBtn.disabled = true;
+    say("Menyimpan…");
+    try {
+      if (isText) {
+        const body = input.value.trim();
+        if (!body) throw new UserError("Isi teks dulu, atau pakai Kosongkan.");
+        await upsert({ body, file_path: null });
+      } else {
+        const file = input.files[0];
+        if (!file) throw new UserError("Pilih file dulu.");
+        const ext = TYPES[slot.kind][file.type];
+        if (!ext) throw new UserError("Jenis file tidak sesuai. Boleh: " + HINT[slot.kind] + ".");
+        if (file.size > MAX_MB * 1024 * 1024) throw new UserError(`File terlalu besar (maks ${MAX_MB} MB).`);
+        const path = `${pageId}/${slot.key}.${ext}`;
+        // upsert: file lama di path yang sama langsung ditimpa
+        const up = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
+        if (up.error) throw up.error;
+        await upsert({ body: null, file_path: path });
+        if (row && row.file_path && row.file_path !== path) await removeFile(row.file_path); // ekstensi berubah
+      }
+      if (curPage().id === pageId) box.replaceWith(slotBox(slot, "Tersimpan."));
+    } catch (err) {
+      console.error(err);
+      say(err instanceof UserError ? err.message : "Gagal menyimpan. Pastikan kamu masuk sebagai admin, lalu coba lagi.", true);
+      saveBtn.disabled = clearBtn.disabled = false;
+    }
+  });
+
+  clearBtn.addEventListener("click", async () => {
+    if (!confirm(`Kosongkan "${slot.label}"? File-nya juga ikut terhapus.`)) return;
+    saveBtn.disabled = clearBtn.disabled = true;
+    say("Menghapus…");
+    const { error } = await sb.from("page_content").delete().eq("page", pageId).eq("slot", slot.key);
+    if (error) { say("Gagal menghapus.", true); saveBtn.disabled = clearBtn.disabled = false; return; }
+    await removeFile(row.file_path);
+    refreshCounts();
+    if (curPage().id === pageId) { delete rows[slot.key]; box.replaceWith(slotBox(slot, "Dikosongkan.")); }
+  });
+
+  return box;
+}
+
+/* ---------- Pegawai, status, dan pembantu bersama ---------- */
+const buildBox = (s, m = "") => s.kind === "person" ? personBox(s, m) : s.kind === "status" ? statusBox(s, m)
+  : s.kind === "document" && s.multiple ? filesBox(s, m) : slotBox(s, m);
+
+async function putRow(pageId, slot, patch) {
+  const newRow = { page: pageId, slot: slot.key, kind: slot.kind, body: null, file_path: null, data: {}, updated_at: new Date().toISOString(), ...patch };
+  const { data, error } = await sb.from("page_content").upsert(newRow, { onConflict: "page,slot" }).select().single();
+  if (error) throw error;
+  if (curPage().id === pageId) rows[slot.key] = data;
+  refreshCounts();
+}
+
+async function dropRow(pageId, slot, row) {
+  const { error } = await sb.from("page_content").delete().eq("page", pageId).eq("slot", slot.key);
+  if (error) throw error;
+  await removeFile(row && row.file_path);
+  if (curPage().id === pageId) delete rows[slot.key];
+  refreshCounts();
+}
+
+function field(label, input) {
+  input.setAttribute("aria-label", label);
+  return el("div", {}, [el("span", { className: "lbl", textContent: label }), input]);
+}
+
+function actions(box, pageId, slot, row, onSave, rebuild, startMsg) {
+  const msg = el("div", { className: "msg", role: "status", textContent: startMsg });
+  const say = (t, err = false) => { msg.textContent = t; msg.className = "msg" + (err ? " err" : ""); };
+  const save = el("button", { className: "primary", type: "button", textContent: "Simpan" });
+  const clear = el("button", { className: "link", type: "button", textContent: "Kosongkan", hidden: !row });
+  const lock = v => { save.disabled = clear.disabled = v; };
+  save.addEventListener("click", async () => {
+    lock(true); say("Menyimpan…");
+    try {
+      await onSave();
+      if (curPage().id === pageId) box.replaceWith(rebuild("Tersimpan."));
+    } catch (err) {
+      console.error(err);
+      say(err instanceof UserError ? err.message : "Gagal menyimpan. Pastikan kamu masuk sebagai admin, lalu coba lagi.", true);
+      lock(false);
+    }
+  });
+  clear.addEventListener("click", async () => {
+    if (!confirm(`Kosongkan "${slot.label}"? Isi dan fotonya ikut terhapus.`)) return;
+    lock(true); say("Menghapus…");
+    try {
+      await dropRow(pageId, slot, row);
+      if (curPage().id === pageId) box.replaceWith(rebuild("Dikosongkan."));
+    } catch (err) { console.error(err); say("Gagal menghapus.", true); lock(false); }
+  });
+  box.append(el("div", { className: "actions" }, [save, clear]), msg);
+}
+
+/* ---------- Daftar pegawai: diisi sekali, dipilih di semua halaman ---------- */
+let employees = [];
+async function fetchEmployees() {
+  const { data, error } = await sb.from("employees").select("*").order("name");
+  if (error) console.error(error);
+  employees = error ? [] : data;
+  renderNav();
+}
+const empPhoto = e => fileUrl({ file_path: e.photo_path, updated_at: e.updated_at });
+const empText = e => e.name + (e.position ? " — " + e.position : "");
+
+async function renderEmployees(note = {}) {
+  if ($("page").value !== EMP) return;
+  $("slots").replaceChildren(el("p", { className: "muted", textContent: "Memuat…" }));
+  await fetchEmployees();
+  if ($("page").value !== EMP) return;
+  $("slots").replaceChildren(
+    el("p", { className: "muted", textContent: "Isi sekali di sini. Di halaman muka dan sub halaman, tinggal pilih pegawai dari daftar ini. Mengubah data di sini otomatis mengubah semua halaman yang memakainya." }),
+    employeeBox(null, note.id === null ? note.text : ""),
+    ...employees.map(e => employeeBox(e, note.id === e.id ? note.text : ""))
+  );
+}
+
+// Satu pegawai = satu bagian: nama, jabatan, dan foto disimpan bersamaan
+function employeeBox(emp, startMsg = "") {
+  const nama = el("input", { type: "text", value: emp ? emp.name : "", maxLength: 120 });
+  const jabatan = el("input", { type: "text", value: emp ? emp.position || "" : "", maxLength: 160 });
+  const nip = el("input", { type: "text", inputMode: "numeric", value: emp ? emp.nip || "" : "", maxLength: 40, placeholder: "Hanya nomor, mis. 1234567890987" });
+  const foto = el("input", { type: "file", accept: Object.keys(TYPES.photo).join(",") });
+  foto.setAttribute("aria-label", "Foto");
+  const has = !!(emp && emp.photo_path);
+  const msg = el("div", { className: "msg", role: "status", textContent: startMsg });
+  const say = (t, err = false) => { msg.textContent = t; msg.className = "msg" + (err ? " err" : ""); };
+  const save = el("button", { className: "primary", type: "button", textContent: emp ? "Simpan perubahan" : "Tambah pegawai" });
+  const del = el("button", { className: "link", type: "button", textContent: "Hapus pegawai", hidden: !emp });
+  const lock = v => { save.disabled = del.disabled = v; };
+  const box = el("section", { className: "slot" }, [
+    el("h2", { textContent: emp ? emp.name : "Tambah pegawai baru" }),
+    field("Nama lengkap", nama),
+    field("Jabatan", jabatan),
+    field("NIP (hanya nomor)", nip),
+    el("span", { className: "lbl", textContent: "Foto" }),
+    el("div", { className: "current" }, [
+      ...(has ? [el("img", { src: empPhoto(emp), alt: "" })] : []),
+      el("span", { className: "muted", textContent: has ? "Foto saat ini. Pilih file baru untuk menggantinya." : "Belum ada foto." })
+    ]),
+    foto,
+    el("div", { className: "actions" }, [save, del]),
+    msg
+  ]);
+
+  save.addEventListener("click", async () => {
+    lock(true); say("Menyimpan…");
+    try {
+      const name = nama.value.trim();
+      if (!name) throw new UserError("Nama lengkap wajib diisi.");
+      const nipVal = nip.value.trim().replace(/^nip[\s:]*/i, ""); // awalan "NIP" ditambahkan otomatis saat tampil
+      if (nipVal && !/^[0-9 ]+$/.test(nipVal)) throw new UserError("NIP hanya berisi angka.");
+      const id = emp ? emp.id : crypto.randomUUID();
+      let photo_path = has ? emp.photo_path : null;
+      const file = foto.files[0];
+      if (file) {
+        const ext = TYPES.photo[file.type];
+        if (!ext) throw new UserError("Foto harus berformat JPG, PNG, atau WebP.");
+        if (file.size > MAX_MB * 1024 * 1024) throw new UserError(`File terlalu besar (maks ${MAX_MB} MB).`);
+        photo_path = `pegawai/${id}.${ext}`;
+        const up = await sb.storage.from(BUCKET).upload(photo_path, file, { upsert: true, contentType: file.type });
+        if (up.error) throw up.error;
+      }
+      const { error } = await sb.from("employees").upsert({ id, name, position: jabatan.value.trim(), nip: nipVal || null, photo_path, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      if (has && emp.photo_path !== photo_path) await removeFile(emp.photo_path); // ekstensi foto berubah
+      await renderEmployees({ id: emp ? id : null, text: "Tersimpan." });
+    } catch (err) {
+      console.error(err);
+      say(err instanceof UserError ? err.message : "Gagal menyimpan. Pastikan kamu masuk sebagai admin, lalu coba lagi.", true);
+      lock(false);
+    }
+  });
+
+  del.addEventListener("click", async () => {
+    try {
+      const { data: used } = await sb.from("page_content").select("page").eq("data->>employee", emp.id);
+      const n = used ? used.length : 0;
+      if (!confirm(`Hapus "${emp.name}"?` + (n ? ` Pegawai ini dipakai di ${n} posisi, dan posisi itu akan kosong.` : ""))) return;
+      lock(true); say("Menghapus…");
+      const { error } = await sb.from("employees").delete().eq("id", emp.id);
+      if (error) throw error;
+      await removeFile(emp.photo_path);
+      await renderEmployees({ id: null, text: "Terhapus." });
+    } catch (err) { console.error(err); say("Gagal menghapus.", true); lock(false); }
+  });
+  return box;
+}
+
+// Satu posisi di halaman = pilih pegawai dari daftar
+function personBox(slot, startMsg = "") {
+  const pageId = curPage().id;
+  const row = rows[slot.key];
+  const d = (row && row.data) || {};
+  const sel = el("select", {}, [
+    el("option", { value: "", textContent: "— Belum dipilih —" }),
+    ...employees.map(e => el("option", { value: e.id, textContent: empText(e) }))
+  ]);
+  sel.value = employees.some(e => e.id === d.employee) ? d.employee : "";
+  sel.setAttribute("aria-label", slot.label);
+  const preview = el("div", { className: "current" });
+  const showPreview = () => {
+    const e = employees.find(x => x.id === sel.value);
+    const hint = !employees.length ? "Daftar pegawai masih kosong. Tambahkan dulu di menu Daftar pegawai."
+      : d.employee ? "Pegawai yang dipilih sebelumnya sudah dihapus. Pilih lagi."
+      : d.name ? "Memakai data lama: " + d.name + ". Pilih pegawai untuk menggantinya."
+      : "Belum ada pegawai dipilih.";
+    preview.replaceChildren(...(e
+      ? [...(e.photo_path ? [el("img", { src: empPhoto(e), alt: "" })] : []), el("span", { textContent: empText(e) })]
+      : [el("span", { className: "muted", textContent: hint })]));
+  };
+  sel.addEventListener("change", showPreview);
+  showPreview();
+  const box = el("section", { className: "slot" }, [el("h2", { textContent: slot.label }), sel, preview]);
+  actions(box, pageId, slot, row, async () => {
+    if (!sel.value) throw new UserError("Pilih pegawai dulu.");
+    await putRow(pageId, slot, { data: { employee: sel.value } });
+  }, m => personBox(slot, m), startMsg);
+  return box;
+}
+
+// Dokumen berjumlah banyak (multiple: true): daftar file yang bertambah; tiap file bisa diganti judulnya atau dihapus
+const pubUrl = path => sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+
+function filesBox(slot, startMsg = "") {
+  const pageId = curPage().id;
+  const row = rows[slot.key];
+  const files = (row && row.data && row.data.files) || (row && row.file_path ? [{ path: row.file_path, title: slot.label }] : []);
+  const msg = el("div", { className: "msg", role: "status", textContent: startMsg });
+  const say = (t, err = false) => { msg.textContent = t; msg.className = "msg" + (err ? " err" : ""); };
+  const box = el("section", { className: "slot" });
+  const busy = v => box.querySelectorAll("button").forEach(b => { b.disabled = v; });
+  const again = m => { if (curPage().id === pageId) box.replaceWith(filesBox(slot, m)); };
+  const fail = err => {
+    console.error(err);
+    say(err instanceof UserError ? err.message : "Gagal menyimpan. Pastikan kamu masuk sebagai admin, lalu coba lagi.", true);
+    busy(false);
+  };
+  const persist = list => list.length ? putRow(pageId, slot, { data: { files: list } }) : dropRow(pageId, slot, null);
+
+  const items = files.map(f => {
+    const ren = el("button", { className: "link neutral", type: "button", textContent: "Ubah judul" });
+    const del = el("button", { className: "link", type: "button", textContent: "Hapus" });
+    ren.addEventListener("click", async () => {
+      const t = prompt("Judul file:", f.title);
+      if (t === null || !t.trim()) return;
+      busy(true); say("Menyimpan…");
+      try { await persist(files.map(x => (x === f ? { ...x, title: t.trim() } : x))); again("Judul diubah."); } catch (err) { fail(err); }
+    });
+    del.addEventListener("click", async () => {
+      if (!confirm(`Hapus "${f.title}"? File-nya ikut terhapus.`)) return;
+      busy(true); say("Menghapus…");
+      try { await persist(files.filter(x => x !== f)); await removeFile(f.path); again("Terhapus."); } catch (err) { fail(err); }
+    });
+    return el("div", { className: "frow" }, [el("a", { href: pubUrl(f.path), target: "_blank", rel: "noopener", textContent: f.title }), ren, del]);
+  });
+
+  const input = el("input", { type: "file", multiple: true, accept: "application/pdf" });
+  input.setAttribute("aria-label", "Pilih file PDF");
+  const add = el("button", { className: "primary", type: "button", textContent: "Tambah file" });
+  add.addEventListener("click", async () => {
+    const picked = [...input.files];
+    const uploaded = [];
+    try {
+      if (!picked.length) throw new UserError("Pilih file PDF dulu.");
+      for (const f of picked) {
+        if (f.type !== "application/pdf") throw new UserError(`"${f.name}" bukan PDF.`);
+        if (f.size > MAX_MB * 1024 * 1024) throw new UserError(`"${f.name}" terlalu besar (maks ${MAX_MB} MB).`);
+      }
+      busy(true);
+      const added = [];
+      for (const [i, f] of picked.entries()) {
+        say(`Mengunggah ${i + 1} dari ${picked.length}…`);
+        const path = `${pageId}/${slot.key}/${crypto.randomUUID()}.pdf`;
+        const up = await sb.storage.from(BUCKET).upload(path, f, { contentType: "application/pdf" });
+        if (up.error) throw up.error;
+        uploaded.push(path);
+        added.unshift({ path, title: f.name.replace(/\.pdf$/i, "").replace(/[+_]+/g, " ").replace(/\s+/g, " ").trim(), at: Date.now() });
+      }
+      await persist([...added, ...files]); // file baru di atas
+      again(`${picked.length} file ditambahkan.`);
+    } catch (err) {
+      for (const p of uploaded) await removeFile(p); // batalkan unggahan yang sudah masuk
+      fail(err);
+    }
+  });
+
+  box.append(
+    el("h2", { textContent: `${slot.label} (${files.length} file)` }),
+    ...(items.length ? items : [el("p", { className: "muted", textContent: "Belum ada file." })]),
+    el("span", { className: "lbl", textContent: "Tambah file (boleh pilih beberapa sekaligus)" }),
+    input,
+    el("div", { className: "muted", textContent: `PDF, maks ${MAX_MB} MB per file. File baru ditambahkan ke daftar, tidak menimpa yang lama.` }),
+    el("div", { className: "actions" }, [add]),
+    msg
+  );
+  return box;
+}
+
+// Status residu risiko: pilih satu level (teks dan warna diambil dari config.js)
+function statusBox(slot, startMsg = "") {
+  const pageId = curPage().id;
+  const row = rows[slot.key];
+  const current = row && row.data && row.data.level;
+  const group = el("div", { className: "levels", role: "radiogroup" });
+  STATUS_LEVELS.forEach(l => {
+    const dot = el("span", { className: "dot" });
+    dot.style.background = l.color;
+    group.append(el("label", { className: "level" }, [
+      el("input", { type: "radio", name: pageId + "-" + slot.key, value: l.key, checked: l.key === current }), dot, l.label
+    ]));
+  });
+  const box = el("section", { className: "slot" }, [el("h2", { textContent: slot.label }), group]);
+  actions(box, pageId, slot, row, async () => {
+    const sel = group.querySelector("input:checked");
+    if (!sel) throw new UserError("Pilih salah satu status.");
+    await putRow(pageId, slot, { data: { level: sel.value } });
+  }, m => statusBox(slot, m), startMsg);
+  return box;
+}
+
+/* ---------- Navigasi samping, dashboard, dan hitungan kelengkapan ---------- */
+let allRows = [];
+const navCount = {}; // id halaman -> { filled, total }
+const hasContent = r => !!(r.body || r.file_path ||
+  (r.data && (r.data.employee || r.data.name || r.data.level || (r.data.files && r.data.files.length))));
+
+async function refreshCounts() {
+  const { data, error } = await sb.from("page_content").select("page,slot,kind,body,file_path,data");
+  if (error) return;
+  allRows = data;
+  PAGES.forEach(p => {
+    const slots = (p.slots || SLOTS).filter(s => s.kind !== "title");
+    const filled = slots.filter(s => data.some(r => r.page === p.id && r.slot === s.key && hasContent(r))).length;
+    navCount[p.id] = { filled, total: slots.length };
+  });
+  renderNav();
+}
+
+function renderNav() {
+  const cur = $("page").value;
+  const item = (hash, label, value, badge) => el("a", { className: "nav-item" + (cur === value ? " active" : ""), href: "#" + hash },
+    [el("span", { textContent: label }), ...(badge ? [el("span", { className: "badge", textContent: badge })] : [])]);
+  $("nav").replaceChildren(
+    item("dasbor", "Dashboard", DASH, ""),
+    item("pegawai", "Daftar pegawai", EMP, employees.length ? String(employees.length) : ""),
+    el("div", { className: "nav-label", textContent: "HALAMAN" }),
+    ...PAGES.map(p => { const c = navCount[p.id]; return item(p.id, p.label, p.id, c ? `${c.filled}/${c.total}` : ""); })
+  );
+}
+
+async function renderDashboard() {
+  $("slots").replaceChildren(el("p", { className: "muted", textContent: "Memuat…" }));
+  await Promise.all([refreshCounts(), fetchEmployees()]);
+  if ($("page").value !== DASH) return;
+  const pdfs = allRows.filter(r => r.kind === "document")
+    .reduce((n, r) => n + (r.data && r.data.files ? r.data.files.length : r.file_path ? 1 : 0), 0);
+  const full = PAGES.filter(p => navCount[p.id] && navCount[p.id].filled === navCount[p.id].total).length;
+  const card = (cls, label, value, note) => el("div", { className: "stat " + cls },
+    [el("div", { textContent: label }), el("b", { textContent: value }), el("small", { textContent: note })]);
+  $("slots").replaceChildren(el("section", { className: "panel" }, [
+    el("h2", { className: "welcome", textContent: "Selamat datang, Admin" }),
+    el("p", { className: "muted", textContent: "Pilih menu di samping untuk mengisi atau mengubah konten. Angka di sebelah nama halaman menunjukkan jumlah komponen yang sudah terisi dari seluruh komponen halaman itu." }),
+    el("div", { className: "stats" }, [
+      card("blue", "Pegawai terdaftar", String(employees.length), "di Daftar pegawai"),
+      card("green", "Halaman terisi penuh", `${full} dari ${PAGES.length}`, "semua komponennya terisi"),
+      card("amber", "Dokumen PDF", String(pdfs), "terunggah di semua halaman")
+    ])
+  ]));
+}
+
+const HASHES = { dasbor: DASH, pegawai: EMP };
+function route() {
+  const h = location.hash.slice(1);
+  const val = HASHES[h] || (PAGES.some(p => p.id === h) ? h : DASH);
+  $("page").value = val;
+  const p = PAGES.find(x => x.id === val);
+  $("pageTitle").textContent = p ? p.label : val === EMP ? "Daftar pegawai" : "Dashboard";
+  $("viewLink").hidden = !p;
+  $("side").classList.remove("open");
+  renderNav();
+  if (val !== DASH) refreshCounts();
+  loadPage();
+}
+window.addEventListener("hashchange", route);
+$("menuBtn").addEventListener("click", () => $("side").classList.toggle("open"));
+$("today").textContent = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+</script>
+</body>
+</html>
