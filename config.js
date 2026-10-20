@@ -6,15 +6,15 @@ window.APP_CONFIG = {
   BUCKET: "content",
   MAX_MB: 10,
 
-  // Pilihan status residu risiko. CONTOH SAJA: ganti dengan level yang sebenarnya.
+  // Pilihan status residu risiko.
   // key: pengenal tetap (huruf kecil/angka/tanda hubung, jangan diubah setelah dipakai)
-  // label: teks yang tampil | color: warna latar (kode hex)
+  // label: teks yang tampil di situs (boleh kosong "" = hanya blok warna)
+  // name: nama pilihan di halaman admin (isi kalau label kosong)
+  // color: warna latar (kode hex)
   STATUS_LEVELS: [
-    { key: "sangat-rendah", label: "Sangat rendah", color: "#2e9e5b" },
-    { key: "rendah",        label: "Rendah",        color: "#8bc34a" },
-    { key: "sedang",        label: "Sedang",        color: "#f2c230" },
-    { key: "tinggi",        label: "Tinggi",        color: "#f08a24" },
-    { key: "sangat-tinggi", label: "Sangat tinggi", color: "#d64545" }
+    { key: "terkendali",       label: "Terkendali",       color: "#15803d" },
+    { key: "belum-terkendali", label: "Belum terkendali", color: "#FFCC00" },
+    { key: "merah",            label: "",                 color: "#dc2626", name: "Merah (tanpa teks)" }
   ],
 
   // Halaman muka + 13 sub halaman. "id" dipakai di alamat (?page=halaman-1) dan nama folder file:

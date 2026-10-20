@@ -176,7 +176,9 @@ $("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
   $("loginMsg").textContent = "";
   const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
-  if (error) $("loginMsg").textContent = "Email atau kata sandi salah.";
+  if (error) $("loginMsg").textContent = /invalid login credentials/i.test(error.message)
+    ? "Email atau kata sandi salah."
+    : "Login gagal: " + (error.message || "tidak bisa terhubung") + ". Periksa config.js dan status proyek Supabase.";
   else $("password").value = "";
 });
 $("logout").addEventListener("click", () => sb.auth.signOut());
@@ -550,7 +552,7 @@ function statusBox(slot, startMsg = "") {
     const dot = el("span", { className: "dot" });
     dot.style.background = l.color;
     group.append(el("label", { className: "level" }, [
-      el("input", { type: "radio", name: pageId + "-" + slot.key, value: l.key, checked: l.key === current }), dot, l.label
+      el("input", { type: "radio", name: pageId + "-" + slot.key, value: l.key, checked: l.key === current }), dot, l.name || l.label
     ]));
   });
   const box = el("section", { className: "slot" }, [el("h2", { textContent: slot.label }), group]);

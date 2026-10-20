@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Konten</title>
 <style>
-:root { --bg: #ffffff; --fg: #1b2430; --muted: #5d6877; --line: #FFCC00; --accent: #0f6fd1; }
+:root { --bg: #ffffff; --fg: #1b2430; --muted: #5d6877; --line: #d9dee5; --accent: #0f6fd1; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #151a21; --fg: #e8ecf1; --muted: #9aa6b5; --line: #FFCC00; --accent: #6aa9f0; }
+  :root { --bg: #151a21; --fg: #e8ecf1; --muted: #9aa6b5; --line: #2c3541; --accent: #6aa9f0; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; padding: 20px; background: var(--bg); color: var(--fg);
@@ -29,9 +29,9 @@ main { display: flex; flex-wrap: wrap; gap: 0 28px; }
 .photo.sq { aspect-ratio: 1 / 1; object-position: 50% 25%; }
 .part-nama .pname, .part-teks .pname { margin-top: 0; }
 .pname { font-weight: 700; font-size: var(--fs-name); margin-top: 8px; }
-.ppos { font-size: var(--fs-pos); margin-bottom: 5px;}
-.pnip { font-size: var(--fs-nip); margin-top: 2px; }
-.slot.status { border: 0; padding: 14px 16px; border-radius: 6px; text-align: center; font-weight: 700; font-size: 18px; }
+.ppos { font-size: var(--fs-pos); margin-bottom: 8px; }
+.pnip { font-size: var(--fs-nip); }
+.slot.status { border: 0; min-height: 52px; padding: 14px 16px; border-radius: 6px; text-align: center; font-weight: 700; font-size: 18px; }
 .menu { display: flex; flex-direction: column; gap: 8px; width: 100%; margin: 8px 0 0; }
 .menu a { padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; }
 
@@ -185,6 +185,7 @@ function renderStatus(slot, row) {
   const level = STATUS_LEVELS.find(l => l.key === (row.data || {}).level);
   if (!level) return null;
   const box = el("section", { className: "slot status", textContent: level.label });
+  if (!level.label) { box.setAttribute("role", "img"); box.setAttribute("aria-label", level.name || "Status"); } // blok warna tanpa teks
   box.style.background = level.color;
   box.style.color = readable(level.color);
   return box;
@@ -251,7 +252,12 @@ async function load() {
     sb.from("page_content").select("*").eq("page", page.id),
     sb.from("employees").select("*")
   ]);
-  if (pc.error || em.error) { console.error(pc.error || em.error); return say("Konten belum bisa dimuat. Coba muat ulang halaman."); }
+  if (pc.error || em.error) {
+    const err = pc.error || em.error;
+    console.error(err);
+    // tambahkan &debug=1 di alamat untuk menampilkan penyebab teknisnya di layar
+    return say("Konten belum bisa dimuat. Coba muat ulang halaman." + (params.get("debug") === "1" ? " [" + (err.message || err) + "]" : ""));
+  }
   const data = pc.data;
   empById = Object.fromEntries(em.data.map(e => [e.id, e]));
 
