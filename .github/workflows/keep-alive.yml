@@ -1,0 +1,36 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: "0 3 * * *"    # tiap hari, 03:00 UTC
+  workflow_dispatch:        # untuk tes manual
+
+permissions:
+  contents: write           # dibutuhkan untuk commit otomatis
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      # Lapisan 1: ketuk database Supabase
+      - name: Ping Supabase
+        run: |
+          curl -sf "${{ secrets.SUPABASE_URL }}/rest/v1/keep_alive?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+
+      # Lapisan 2: jaga repo tetap "aktif"
+      - uses: actions/checkout@v4
+
+      - name: Commit kosong jika repo sepi 45+ hari
+        run: |
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          days=$(( (now - last) / 86400 ))
+          echo "Commit terakhir $days hari lalu"
+          if [ "$days" -ge 45 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keep scheduled workflow active"
+            git push
+          fi
