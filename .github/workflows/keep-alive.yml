@@ -2,7 +2,7 @@ name: Keep Alive
 
 on:
   schedule:
-    - cron: "27 3 * * *"    # tiap hari, 03:00 UTC
+    - cron: "27 3 * * *"    # tiap hari, 03:27 UTC (10:27 WIB)
   workflow_dispatch:        # untuk tes manual
 
 permissions:
