@@ -273,11 +273,13 @@ async function load() {
 
   const bySlot = Object.fromEntries(data.map(r => [r.slot, r]));
   const all = page.slots || SLOTS;
+  // data yang masih tersimpan dengan nama lama tetap tampil sampai ganti-nama-posisi.sql dijalankan
+  all.forEach(s => (s.aliases || []).forEach(k => { if (!bySlot[s.key] && bySlot[k]) bySlot[s.key] = bySlot[k]; }));
   let urut = urutParam;
   // alamat lama ?slot=pengendali-1 tetap bekerja: dianggap pengendali ke-1 dari daftar
   const wanted = onlySlots && onlySlots.map(k => {
     const ps = all.find(s => s.kind === "people" && (s.legacy || []).includes(k));
-    if (!ps) return k;
+    if (!ps) { const al = all.find(s => (s.aliases || []).includes(k)); return al ? al.key : k; } // nama lama -> nama baru
     urut = urut || ps.legacy.indexOf(k) + 1;
     return ps.key;
   });
