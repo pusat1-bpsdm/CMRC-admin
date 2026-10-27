@@ -22,22 +22,22 @@ window.APP_CONFIG = {
   PAGES: [
     { id: "home", label: "Halaman muka", slots: [
       { key: "pemilik",      label: "Pemilik risiko",    kind: "person", large: true },
-      { key: "pengendali-1", label: "Pengendali risiko 1", kind: "person" },
-      { key: "pengendali-2", label: "Pengendali risiko 2", kind: "person" },
-      { key: "pengendali-3", label: "Pengendali risiko 3", kind: "person" },
-      { key: "pengendali-4", label: "Pengendali risiko 4", kind: "person" }
+      { key: "pengelola-1", label: "Pengelola risiko 1", kind: "person" },
+      { key: "pengelola-2", label: "Pengelola risiko 2", kind: "person" },
+      { key: "pengelola-3", label: "Pengelola risiko 3", kind: "person" },
+      { key: "pengelola-4", label: "Pengelola risiko 4", kind: "person" }
     ] },
-    { id: "halaman-1", label: "1. Ketidakpercayaan Pegawai terhadap hasil pengembangan talenta (hasil penilaian potensi dan kompetensi)" },
-    { id: "halaman-2", label: "2. Barang yang diterima tidak memenuhi standar yang telah ditetapkan" },
-    { id: "halaman-3", label: "3. Tidak tercapainya target kinerja penilaian potensi dan kompetensi sebagai dasar penyusunan profil kompetensi Pegawai" },
-    { id: "halaman-4", label: "4. Penggunaan Barang Persediaan keperluan kantor dimanfaatkan untuk kepentingan pribadi" },
-    { id: "halaman-5", label: "5. Ketidakandalan data hasil keluaran/rekomendasi pengembangan talenta" },
-    { id: "halaman-6", label: "6. Asesi memberikan hadiah kepada asesor" },
-    { id: "halaman-7", label: "7. Ketidaksesuaian pengelolaan kinerja Pegawai sesuai dengan peraturan terbaru/terkait kinerja 2026" },
-    { id: "halaman-8", label: "8. Ketidakmampuan bidang Kepatuhan Intern untuk memastikan pengendalian risiko telah dilakukan oleh UPR sesuai profil risiko yang disusun" },
-    { id: "halaman-9", label: "9. Ketidakandalan data hasil keluaran/rekomendasi pengembangan talenta" },
-    { id: "halaman-10", label: "10. Tidak tercapainya target pembinaan, laporan pengembangan KI & MR, jumlah laporan pengendalian dan pemantauan kepatuhan intern" },
-    { id: "halaman-11", label: "11. Ketidaksesuaian kompetensi Pegawai dengan tugas dan fungsi yang dilaksanakan" },
+    { id: "halaman-1", label: "1. Barang yang diterima tidak memenuhi standar yang telah ditetapkan" },
+    { id: "halaman-2", label: "2. Penggunaan Barang Persediaan keperluan kantor dimanfaatkan untuk kepentingan pribadi" },
+    { id: "halaman-3", label: "3. Ketidakandalan data hasil keluaran/rekomendasi pengembangan talenta" },
+    { id: "halaman-4", label: "4. Asesi memberikan hadiah kepada asesor" },
+    { id: "halaman-5", label: "5. Ketidaksesuaian pengelolaan kinerja Pegawai sesuai dengan peraturan terbaru/terkait kinerja 2026" },
+    { id: "halaman-6", label: "6. Ketidakmampuan bidang Kepatuhan Intern untuk memastikan pengendalian risiko telah dilakukan oleh UPR sesuai profil risiko yang disusun" },
+    { id: "halaman-7", label: "7. Ketidakandalan data hasil Penilaian Potensi dan Kompetensi" },
+    { id: "halaman-8", label: "8. Tidak tercapainya target pembinaan, laporan pengembangan KI & MR, jumlah laporan pengendalian dan pemantauan kepatuhan intern" },
+    { id: "halaman-9", label: "9. Ketidaksesuaian kompetensi Pegawai dengan tugas dan fungsi yang dilaksanakan" },
+    { id: "halaman-10", label: "10. Ketidakpercayaan Pegawai terhadap hasil pengembangan talenta" },
+    { id: "halaman-11", label: "11. Tidak tercapainya target kinerja penilaian potensi dan kompetensi sebagai dasar penyusunan profil kompetensi PNS" },
     { id: "halaman-12", label: "12. Keterlambatan pelaksanaan penilaian kinerja Pegawai sesuai aturan" },
     { id: "halaman-13", label: "13. Data dalam e-Nominasi tidak andal" }
   ],
@@ -47,15 +47,15 @@ window.APP_CONFIG = {
   // kind: "title" (judul halaman otomatis dari label, tanpa input di admin) | "status" | "person" | "document"
   // multiple: true  -> komponen dokumen berisi BANYAK PDF (daftar yang bertambah), bukan satu file yang ditimpa
   SLOTS: [
-    { key: "judul",             label: "Judul halaman",                 kind: "title" },
-    { key: "status",            label: "Status residu risiko",          kind: "status" },
-    { key: "penjamin-mutu",     label: "Penjamin mutu",                 kind: "person" },
-    { key: "pengendali",        label: "Pengendali risiko",             kind: "people", legacy: ["pengendali-1", "pengendali-2"] },
-    { key: "risk-register",     label: "Risk register",                 kind: "document" },
-    { key: "sop",               label: "SOP",                           kind: "document" },
-    { key: "form-pengendalian", label: "Form pengendalian",             kind: "document" },
-    { key: "jadwal-rencana",    label: "Jadwal rencana",                kind: "document" },
-    { key: "bukti-pelaksanaan", label: "Bukti pelaksanaan",             kind: "document", multiple: true },
-    { key: "eval-perbaikan",    label: "Evaluasi dan rencana perbaikan", kind: "document" }
+    { key: "judul",             label: "Judul halaman",                     kind: "title" },
+    { key: "status",            label: "Status residu risiko",              kind: "status" },
+    { key: "penjamin-mutu",     label: "Pengelola risiko / Penjamin mutu",  kind: "person" },
+    { key: "pengendali",        label: "Pengendali risiko",                 kind: "people", legacy: ["pengendali-1", "pengendali-2"] },
+    { key: "risk-register",     label: "Risk register",                     kind: "document" },
+    { key: "sop",               label: "SOP",                               kind: "document" },
+    { key: "form-pengendalian", label: "Form pengendalian",                 kind: "document" },
+    { key: "jadwal-rencana",    label: "Jadwal pengendalian",               kind: "document" },
+    { key: "bukti-pelaksanaan", label: "Bukti pengendalian",                kind: "document", multiple: true },
+    { key: "eval-perbaikan",    label: "Monitoring dan evaluasi",           kind: "document" }
   ]
 };
