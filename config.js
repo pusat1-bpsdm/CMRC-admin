@@ -14,7 +14,7 @@ window.APP_CONFIG = {
   STATUS_LEVELS: [
     { key: "terkendali",       label: "Terkendali",       color: "#15803d" },
     { key: "belum-terkendali", label: "Belum terkendali", color: "#FFCC00" },
-    { key: "merah",            label: "",                 color: "#dc2626", name: "Merah (tanpa teks)" }
+    { key: "merah",            label: "Tidak Terkendali", color: "#dc2626" }
   ],
 
   // Halaman muka + 13 sub halaman. "id" dipakai di alamat (?page=halaman-1) dan nama folder file:
@@ -43,14 +43,14 @@ window.APP_CONFIG = {
   ],
 
   // Komponen yang sama di SETIAP sub halaman (halaman tanpa "slots" sendiri memakai daftar ini).
+  // kind: "people" = daftar pegawai yang jumlahnya fleksibel (ditambah dari admin; di embed dipilih lewat &urut=1, 2, ...)
   // kind: "title" (judul halaman otomatis dari label, tanpa input di admin) | "status" | "person" | "document"
   // multiple: true  -> komponen dokumen berisi BANYAK PDF (daftar yang bertambah), bukan satu file yang ditimpa
   SLOTS: [
     { key: "judul",             label: "Judul halaman",                 kind: "title" },
     { key: "status",            label: "Status residu risiko",          kind: "status" },
     { key: "penjamin-mutu",     label: "Penjamin mutu",                 kind: "person" },
-    { key: "pengendali-1",      label: "Pengendali risiko 1",           kind: "person" },
-    { key: "pengendali-2",      label: "Pengendali risiko 2",           kind: "person" },
+    { key: "pengendali",        label: "Pengendali risiko",             kind: "people", legacy: ["pengendali-1", "pengendali-2"] },
     { key: "risk-register",     label: "Risk register",                 kind: "document" },
     { key: "sop",               label: "SOP",                           kind: "document" },
     { key: "form-pengendalian", label: "Form pengendalian",             kind: "document" },

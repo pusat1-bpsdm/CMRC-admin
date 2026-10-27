@@ -71,9 +71,11 @@ button:disabled { opacity: .55; cursor: wait; }
 .stat.blue { background: #3b82f6; } .stat.green { background: #16a34a; } .stat.amber { background: #d97706; }
 
 .current { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
-.current img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; background: var(--line); }
+.current img { width: 48px; height: 64px; object-fit: cover; border-radius: 6px; background: var(--line); }
 .frow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .frow a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.frow select { flex: 1; min-width: 0; }
+.frow b { min-width: 1.6em; }
 .levels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .level { display: flex; align-items: center; gap: 8px; margin: 0; padding: 8px 12px; border: 1px solid #cbd5e1;
   border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .95rem; }
@@ -285,7 +287,7 @@ function slotBox(slot, startMsg = "") {
 }
 
 /* ---------- Pegawai, status, dan pembantu bersama ---------- */
-const buildBox = (s, m = "") => s.kind === "person" ? personBox(s, m) : s.kind === "status" ? statusBox(s, m)
+const buildBox = (s, m = "") => s.kind === "people" ? peopleBox(s, m) : s.kind === "person" ? personBox(s, m) : s.kind === "status" ? statusBox(s, m)
   : s.kind === "document" && s.multiple ? filesBox(s, m) : slotBox(s, m);
 
 async function putRow(pageId, slot, patch) {
@@ -542,6 +544,49 @@ function filesBox(slot, startMsg = "") {
   return box;
 }
 
+// Daftar pegawai berjumlah fleksibel (kind "people"): tambah/hapus baris sesuai kebutuhan, simpan sekaligus
+function peopleBox(slot, startMsg = "") {
+  const pageId = curPage().id;
+  const row = rows[slot.key];
+  let ids, fromLegacy = false;
+  if (row && row.data && Array.isArray(row.data.employees)) ids = row.data.employees.slice();
+  else {
+    ids = (slot.legacy || []).map(k => rows[k] && rows[k].data && rows[k].data.employee).filter(Boolean);
+    fromLegacy = ids.length > 0;
+  }
+  const list = el("div", {});
+  const draw = () => {
+    list.replaceChildren(...ids.map((id, i) => {
+      const sel = el("select", {}, [
+        el("option", { value: "", textContent: "— Pilih pegawai —" }),
+        ...employees.map(e => el("option", { value: e.id, textContent: empText(e) }))
+      ]);
+      sel.value = employees.some(e => e.id === id) ? id : "";
+      sel.setAttribute("aria-label", `${slot.label} ${i + 1}`);
+      sel.addEventListener("change", () => { ids[i] = sel.value; });
+      const del = el("button", { className: "link", type: "button", textContent: "Hapus" });
+      del.addEventListener("click", () => { ids.splice(i, 1); draw(); });
+      return el("div", { className: "frow" }, [el("b", { textContent: `${i + 1}.` }), sel, del]);
+    }));
+    if (!ids.length) list.append(el("p", { className: "muted", textContent: "Belum ada pegawai di daftar ini." }));
+  };
+  draw();
+  const add = el("button", { type: "button", textContent: "Tambah baris" });
+  add.addEventListener("click", () => { ids.push(""); draw(); });
+  const box = el("section", { className: "slot" }, [
+    el("h2", { textContent: slot.label }),
+    list,
+    el("div", { className: "actions" }, [add]),
+    el("div", { className: "muted", textContent: `Nomor urut dipakai di alamat embed: &slot=${slot.key}&urut=1, &urut=2, dan seterusnya.` +
+      (fromLegacy ? " Terisi dari data lama; klik Simpan untuk menyimpannya sebagai daftar." : "") })
+  ]);
+  // row=null: tombol Kosongkan tidak dipakai; daftar kosong disimpan sebagai daftar kosong agar data lama tidak muncul lagi
+  actions(box, pageId, slot, null, async () => {
+    await putRow(pageId, slot, { kind: "person", data: { employees: ids.filter(Boolean) } });
+  }, m => peopleBox(slot, m), startMsg);
+  return box;
+}
+
 // Status residu risiko: pilih satu level (teks dan warna diambil dari config.js)
 function statusBox(slot, startMsg = "") {
   const pageId = curPage().id;
@@ -568,7 +613,7 @@ function statusBox(slot, startMsg = "") {
 let allRows = [];
 const navCount = {}; // id halaman -> { filled, total }
 const hasContent = r => !!(r.body || r.file_path ||
-  (r.data && (r.data.employee || r.data.name || r.data.level || (r.data.files && r.data.files.length))));
+  (r.data && (r.data.employee || r.data.name || r.data.level || (r.data.files && r.data.files.length) || (r.data.employees && r.data.employees.length))));
 
 async function refreshCounts() {
   const { data, error } = await sb.from("page_content").select("page,slot,kind,body,file_path,data");
