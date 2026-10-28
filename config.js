@@ -12,9 +12,9 @@ window.APP_CONFIG = {
   // name: nama pilihan di halaman admin (isi kalau label kosong)
   // color: warna latar (kode hex)
   STATUS_LEVELS: [
-    { key: "terkendali",       label: "Terkendali",       color: "#15803d" },
-    { key: "belum-terkendali", label: "Belum terkendali", color: "#FFCC00" },
-    { key: "merah",            label: "",                 color: "#dc2626", name: "Merah (tanpa teks)" }
+    { key: "terkendali",       label: "TERKENDALI",       color: "#15803d" },
+    { key: "belum-terkendali", label: "BELUM TERKENDALI", color: "#FFCC00" },
+    { key: "merah",            label: "TIDAK TERKENDALI", color: "#dc2626"}
   ],
 
   // Halaman muka + 13 sub halaman. "id" dipakai di alamat (?page=halaman-1) dan nama folder file:
