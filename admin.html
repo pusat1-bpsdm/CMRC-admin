@@ -74,6 +74,9 @@ button:disabled { opacity: .55; cursor: wait; }
 .current img { width: 48px; height: 64px; object-fit: cover; border-radius: 6px; background: var(--line); }
 .frow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .frow a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ba { display: flex; gap: 12px; margin-top: 8px; }
+.ba figure { margin: 0; text-align: center; font-size: .8rem; color: var(--muted); }
+.ba img { display: block; width: 96px; height: 128px; object-fit: contain; background: #003366; border-radius: 6px; }
 .frow select { flex: 1; min-width: 0; }
 .frow b { min-width: 1.6em; }
 .levels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
@@ -362,6 +365,67 @@ async function renderEmployees(note = {}) {
   );
 }
 
+/* ---------- Pemrosesan foto pegawai: pangkas bagian transparan, pusatkan, rasio 3:4 ---------- */
+const PHOTO_W = 600, PHOTO_H = 800;  // ukuran hasil (3:4)
+const ALPHA_T = 40;                  // piksel dengan alpha di atas ini dianggap bagian objek
+const MAX_ORIGINAL_MB = 30;          // batas foto asli yang boleh dipilih (yang diunggah hanya hasil olahan)
+
+// Hitungan murni (tanpa kanvas): menentukan area potong 3:4 dari data piksel RGBA
+function planCrop(px, w, h) {
+  let x0 = w, x1 = -1, y0 = h, y1 = -1, soft = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const al = px[(y * w + x) * 4 + 3];
+      if (al < 250) soft++;
+      if (al > ALPHA_T) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+  }
+  if (x1 < 0) return null;                                   // tidak ada bagian yang terlihat
+  if (soft < w * h * 0.02) {                                 // tanpa latar transparan: potong dari tengah saja
+    if (w / h > 0.75) { const cw = Math.round(h * 0.75); return { transparent: false, left: Math.round((w - cw) / 2), top: 0, cw, ch: h }; }
+    return { transparent: false, left: 0, top: 0, cw: w, ch: Math.round(w / 0.75) };
+  }
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  const centroid = (from, to) => {                           // pusat horizontal objek pada pita ketinggian tertentu
+    let sum = 0, n = 0;
+    for (let y = y0 + Math.floor(bh * from); y < y0 + Math.floor(bh * to); y++)
+      for (let x = x0; x <= x1; x++) if (px[(y * w + x) * 4 + 3] > ALPHA_T) { sum += x; n++; }
+    return n ? sum / n : (x0 + x1) / 2;
+  };
+  const cx = (centroid(0, 0.22) + centroid(0.45, 0.85)) / 2; // titik tengah antara kepala dan badan
+  const ch = Math.max(bh, Math.ceil(bw * 4 / 3));
+  const cw = Math.round(ch * 0.75);
+  let left = Math.round(cx - cw / 2);
+  if (left > x0) left = x0;                                   // pastikan seluruh objek tetap masuk
+  if (left + cw < x1 + 1) left = x1 + 1 - cw;
+  return { transparent: true, left, top: y1 + 1 - ch, cw, ch }; // ujung kepala di atas, dasar badan di bawah
+}
+
+async function processPhoto(file) {
+  const bmp = await createImageBitmap(file);
+  const s = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
+  const src = document.createElement("canvas");
+  src.width = w; src.height = h;
+  const sctx = src.getContext("2d", { willReadFrequently: true });
+  sctx.drawImage(bmp, 0, 0, w, h);
+  bmp.close();
+  const plan = planCrop(sctx.getImageData(0, 0, w, h).data, w, h);
+  if (!plan) throw new UserError("Foto kosong atau seluruhnya transparan.");
+  const mid = document.createElement("canvas");
+  mid.width = plan.cw; mid.height = plan.ch;
+  mid.getContext("2d").drawImage(src, -plan.left, -plan.top);
+  const out = document.createElement("canvas");
+  out.width = PHOTO_W; out.height = PHOTO_H;
+  const octx = out.getContext("2d");
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(mid, 0, 0, PHOTO_W, PHOTO_H);
+  const type = out.toDataURL("image/webp").startsWith("data:image/webp") ? "image/webp" : "image/png";
+  const blob = await new Promise(res => out.toBlob(res, type, 0.9));
+  if (!blob) throw new Error("Gagal membuat gambar hasil");
+  return { blob, transparent: plan.transparent };
+}
+
 // Satu pegawai = satu bagian: nama, jabatan, dan foto disimpan bersamaan
 function employeeBox(emp, startMsg = "") {
   const nama = el("input", { type: "text", value: emp ? emp.name : "", maxLength: 120 });
@@ -370,6 +434,8 @@ function employeeBox(emp, startMsg = "") {
   const foto = el("input", { type: "file", accept: Object.keys(TYPES.photo).join(",") });
   foto.setAttribute("aria-label", "Foto");
   const has = !!(emp && emp.photo_path);
+  let processed = null; // hasil olahan foto yang dipilih (yang akan diunggah)
+  const preview = el("div", { className: "ba" });
   const msg = el("div", { className: "msg", role: "status", textContent: startMsg });
   const say = (t, err = false) => { msg.textContent = t; msg.className = "msg" + (err ? " err" : ""); };
   const save = el("button", { className: "primary", type: "button", textContent: emp ? "Simpan perubahan" : "Tambah pegawai" });
@@ -383,12 +449,34 @@ function employeeBox(emp, startMsg = "") {
     el("span", { className: "lbl", textContent: "Foto" }),
     el("div", { className: "current" }, [
       ...(has ? [el("img", { src: empPhoto(emp), alt: "" })] : []),
-      el("span", { className: "muted", textContent: has ? "Foto saat ini. Pilih file baru untuk menggantinya." : "Belum ada foto." })
+      el("span", { className: "muted", textContent: has ? "Foto saat ini. Pilih file baru untuk menggantinya (dirapikan otomatis ke 3:4)." : "Belum ada foto." })
     ]),
     foto,
+    preview,
     el("div", { className: "actions" }, [save, del]),
     msg
   ]);
+
+  foto.addEventListener("change", async () => {
+    processed = null;
+    preview.replaceChildren();
+    const file = foto.files[0];
+    if (!file) return;
+    say("Memproses foto…");
+    try {
+      if (!TYPES.photo[file.type]) throw new UserError("Foto harus berformat JPG, PNG, atau WebP.");
+      if (file.size > MAX_ORIGINAL_MB * 1024 * 1024) throw new UserError(`File terlalu besar (maks ${MAX_ORIGINAL_MB} MB).`);
+      processed = await processPhoto(file);
+      preview.replaceChildren(...[["Sebelum", file], ["Sesudah", processed.blob]].map(([t, f]) =>
+        el("figure", {}, [el("img", { src: URL.createObjectURL(f), alt: t }), el("figcaption", { textContent: t })])));
+      say(`Hasil ${Math.round(processed.blob.size / 1024)} KB. Periksa Sebelum dan Sesudah, lalu simpan.` +
+        (processed.transparent ? "" : " Foto ini tidak punya latar transparan, jadi hanya dipotong dari tengah dan posisinya bisa kurang seragam."));
+    } catch (err) {
+      console.error(err);
+      processed = null; foto.value = "";
+      say(err instanceof UserError ? err.message : "Foto tidak bisa dibaca. Coba file lain.", true);
+    }
+  });
 
   save.addEventListener("click", async () => {
     lock(true); say("Menyimpan…");
@@ -401,11 +489,10 @@ function employeeBox(emp, startMsg = "") {
       let photo_path = has ? emp.photo_path : null;
       const file = foto.files[0];
       if (file) {
-        const ext = TYPES.photo[file.type];
-        if (!ext) throw new UserError("Foto harus berformat JPG, PNG, atau WebP.");
-        if (file.size > MAX_MB * 1024 * 1024) throw new UserError(`File terlalu besar (maks ${MAX_MB} MB).`);
+        if (!processed) throw new UserError("Foto belum selesai diproses atau tidak valid. Pilih ulang fotonya.");
+        const ext = processed.blob.type === "image/webp" ? "webp" : "png";
         photo_path = `pegawai/${id}.${ext}`;
-        const up = await sb.storage.from(BUCKET).upload(photo_path, file, { upsert: true, contentType: file.type });
+        const up = await sb.storage.from(BUCKET).upload(photo_path, processed.blob, { upsert: true, contentType: processed.blob.type });
         if (up.error) throw up.error;
       }
       const { error } = await sb.from("employees").upsert({ id, name, position: jabatan.value.trim(), nip: nipVal || null, photo_path, updated_at: new Date().toISOString() });
